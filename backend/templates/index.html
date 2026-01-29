@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Task Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>Task Manager</h1>
+
+
+    <div class="tabs">
+      <button class="tab-button active" onclick="openTab('tasksTab')">Tasks</button>
+      <button class="tab-button" onclick="openTab('usersTab')">Users</button>
+    </div>
+
+
+    <div id="tasksTab" class="tab-content active">
+      <div class="form-group">
+        <input type="text" id="taskInput" placeholder="New task">
+        <button onclick="addTask()">Add</button>
+      </div>
+      <ul id="taskList"></ul>
+    </div>
+
+
+    <div id="usersTab" class="tab-content">
+      <div class="form-group">
+        <input type="text" id="userName" placeholder="Name">
+        <input type="text" id="userEmail" placeholder="Email">
+        <button onclick="addUser()">Add</button>
+      </div>
+      <ul id="userList"></ul>
+    </div>
+  </div>
+
+  <script>
+
+    function openTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+
+    async function fetchTasks() {
+      const res = await fetch("/tasks");
+      const tasks = await res.json();
+      const list = document.getElementById("taskList");
+      list.innerHTML = "";
+      tasks.forEach(task => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span>${task[1]}</span>
+          <div>
+            <button class="edit" onclick="editTask(${task[0]}, '${task[1].replace(/'/g, "\\'")}')">Edit</button>
+            <button class="delete" onclick="deleteTask(${task[0]})">Delete</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function addTask() {
+      const title = document.getElementById("taskInput").value.trim();
+      if (!title) return alert("Enter a task!");
+      await fetch("/tasks", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title})
+      });
+      document.getElementById("taskInput").value = "";
+      fetchTasks();
+    }
+
+    async function deleteTask(id) {
+      await fetch(`/tasks/${id}`, { method: "DELETE" });
+      fetchTasks();
+    }
+
+    async function editTask(id, oldTitle) {
+      const newTitle = prompt("Edit task:", oldTitle);
+      if (!newTitle) return;
+      await fetch(`/tasks/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title: newTitle})
+      });
+      fetchTasks();
+    }
+
+    fetchTasks();
+
+
+    async function fetchUsers() {
+      const res = await fetch("/users");
+      const users = await res.json();
+      const list = document.getElementById("userList");
+      list.innerHTML = "";
+      users.forEach(user => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span>${user[1]} (${user[2]})</span>
+          <div>
+            <button class="edit" onclick="editUser(${user[0]}, '${user[1].replace(/'/g, "\\'")}', '${user[2].replace(/'/g, "\\'")}')">Edit</button>
+            <button class="delete" onclick="deleteUser(${user[0]})">Delete</button>
+          </div>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function addUser() {
+      const name = document.getElementById("userName").value.trim();
+      const email = document.getElementById("userEmail").value.trim();
+      if (!name || !email) return alert("Enter name and email!");
+      await fetch("/users", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, email})
+      });
+      document.getElementById("userName").value = "";
+      document.getElementById("userEmail").value = "";
+      fetchUsers();
+    }
+
+    async function deleteUser(id) {
+      await fetch(`/users/${id}`, { method: "DELETE" });
+      fetchUsers();
+    }
+
+    async function editUser(id, oldName, oldEmail) {
+      const name = prompt("Edit name:", oldName);
+      if (!name) return;
+      const email = prompt("Edit email:", oldEmail);
+      if (!email) return;
+      await fetch(`/users/${id}`, {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name, email})
+      });
+      fetchUsers();
+    }
+
+    fetchUsers();
+  </script>
+</body>
+</html>
